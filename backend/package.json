@@ -1,0 +1,24 @@
+{
+  "name": "mindmap-backend",
+  "version": "1.0.0",
+  "description": "Backend server for mindmap application",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "init-db": "node init-db.js",
+    "build": "echo 'No build step required for Node.js backend'",
+    "lint": "echo 'Add ESLint configuration for backend'",
+    "test": "echo 'Add test configuration for backend'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

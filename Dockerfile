@@ -1,31 +1,54 @@
-# Build stage
-FROM node:18-alpine as build
+# Multi-stage build for frontend and backend
+FROM node:18-alpine as base
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+COPY backend/package*.json ./backend/
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
-# Copy source code
-COPY . .
-
-# Build the application
+# Build frontend
+FROM base as frontend-build
+COPY frontend/ ./frontend/
+WORKDIR /app/frontend
 RUN npm run build
 
+# Build backend
+FROM base as backend-build
+COPY backend/ ./backend/
+WORKDIR /app/backend
+RUN npm ci --only=production
+
 # Production stage
-FROM nginx:alpine
+FROM node:18-alpine as production
 
-# Copy built assets from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Install production dependencies for backend
+COPY --from=backend-build /app/backend/node_modules ./backend/node_modules
+COPY --from=backend-build /app/backend/package*.json ./backend/
 
-# Expose port 80
-EXPOSE 80
+# Copy backend source
+COPY backend/ ./backend/
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Copy frontend build
+COPY --from=frontend-build /app/frontend/dist ./backend/public
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
+# Expose port
+EXPOSE 3001
+
+# Start the application
+WORKDIR /app/backend
+CMD ["npm", "start"]

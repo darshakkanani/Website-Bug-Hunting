@@ -7,24 +7,26 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 
 export const Dashboard: React.FC = () => {
-  const { mindMaps, createMindMap, deleteMindMap, setCurrentMindMap } = useMindMap();
+  const { mindMaps, createMindMap, deleteMindMap, setCurrentMindMap, loading, error } = useMindMap();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
 
-  const handleCreateMindMap = () => {
+  const handleCreateMindMap = async () => {
     if (newTitle.trim()) {
-      const mindMap = createMindMap(newTitle.trim(), newDescription.trim());
-      setCurrentMindMap(mindMap);
-      setNewTitle('');
-      setNewDescription('');
-      setIsCreateModalOpen(false);
+      const mindMap = await createMindMap(newTitle.trim(), newDescription.trim());
+      if (mindMap) {
+        setCurrentMindMap(mindMap);
+        setNewTitle('');
+        setNewDescription('');
+        setIsCreateModalOpen(false);
+      }
     }
   };
 
-  const handleDeleteMindMap = (id: string, title: string) => {
+  const handleDeleteMindMap = async (id: string, title: string) => {
     if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      deleteMindMap(id);
+      await deleteMindMap(id);
     }
   };
 
@@ -61,7 +63,18 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {mindMaps.length === 0 ? (
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
+            <p className="text-red-800 dark:text-red-200">Error: {error}</p>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading mind maps...</p>
+          </div>
+        ) : mindMaps.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
@@ -185,9 +198,9 @@ export const Dashboard: React.FC = () => {
             <Button
               onClick={handleCreateMindMap}
               className="flex-1"
-              disabled={!newTitle.trim()}
+              disabled={!newTitle.trim() || loading}
             >
-              Create
+              {loading ? 'Creating...' : 'Create'}
             </Button>
             <Button
               onClick={() => {

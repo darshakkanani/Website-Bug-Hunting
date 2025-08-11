@@ -39,8 +39,8 @@ export const Editor: React.FC = () => {
       clearTimeout(autoSaveTimeout);
     }
     
-    const timeout = setTimeout(() => {
-      updateMindMap(updatedMindMap);
+    const timeout = setTimeout(async () => {
+      await updateMindMap(updatedMindMap);
       setHasUnsavedChanges(false);
     }, 2000);
     
@@ -63,17 +63,17 @@ export const Editor: React.FC = () => {
       clearTimeout(autoSaveTimeout);
     }
     
-    const timeout = setTimeout(() => {
-      updateMindMap(updatedMindMap);
+    const timeout = setTimeout(async () => {
+      await updateMindMap(updatedMindMap);
       setHasUnsavedChanges(false);
     }, 2000);
     
     setAutoSaveTimeout(timeout);
   }, [currentMindMap, setCurrentMindMap, updateMindMap, autoSaveTimeout]);
 
-  const handleManualSave = () => {
+  const handleManualSave = async () => {
     if (currentMindMap && hasUnsavedChanges) {
-      updateMindMap(currentMindMap);
+      await updateMindMap(currentMindMap);
       setHasUnsavedChanges(false);
       
       if (autoSaveTimeout) {
