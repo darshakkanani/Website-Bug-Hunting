@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { MindMap } from '../types/mindmap';
 import { apiService } from '../services/api';
+import { useAuth } from './AuthContext';
 
 interface MindMapContextType {
   mindMaps: MindMap[];
@@ -18,20 +19,28 @@ interface MindMapContextType {
 const MindMapContext = createContext<MindMapContextType | undefined>(undefined);
 
 export const MindMapProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
   const [mindMaps, setMindMaps] = useState<MindMap[]>([]);
   const [currentMindMap, setCurrentMindMap] = useState<MindMap | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load mindmaps from database on component mount
+  // Load mindmaps from database when token changes
   useEffect(() => {
-    loadMindMaps();
-  }, []);
+    if (token) {
+      loadMindMaps();
+    } else {
+      setMindMaps([]);
+      setCurrentMindMap(null);
+    }
+  }, [token]);
 
   const loadMindMaps = async () => {
+    if (!token) return;
+    
     setLoading(true);
     setError(null);
-    const response = await apiService.getAllMindmaps();
+    const response = await apiService.getAllMindmaps(token);
     
     if (response.error) {
       setError(response.error);
@@ -42,10 +51,12 @@ export const MindMapProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const saveMindMap = async (mindMap: MindMap) => {
+    if (!token) return;
+    
     setLoading(true);
     setError(null);
     
-    const response = await apiService.updateMindmap(mindMap.id, mindMap);
+    const response = await apiService.updateMindmap(mindMap.id, mindMap, token);
     
     if (response.error) {
       setError(response.error);
@@ -62,10 +73,12 @@ export const MindMapProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteMindMap = async (id: string) => {
+    if (!token) return;
+    
     setLoading(true);
     setError(null);
     
-    const response = await apiService.deleteMindmap(id);
+    const response = await apiService.deleteMindmap(id, token);
     
     if (response.error) {
       setError(response.error);
@@ -79,10 +92,12 @@ export const MindMapProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const createMindMap = async (title: string, description?: string): Promise<MindMap | null> => {
+    if (!token) return null;
+    
     setLoading(true);
     setError(null);
     
-    const response = await apiService.createMindmap(title, description);
+    const response = await apiService.createMindmap(title, description, token);
     
     if (response.error) {
       setError(response.error);

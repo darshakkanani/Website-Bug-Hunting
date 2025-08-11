@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Brain, Home, Settings, Sun, Moon } from 'lucide-react';
+import { Brain, Home, Settings, Sun, Moon, User, LogOut } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const location = useLocation();
 
   const navItems = [
@@ -25,38 +27,59 @@ export const Header: React.FC = () => {
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20'
-                      : 'text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {user && (
+            <nav className="hidden md:flex items-center space-x-8">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20'
+                        : 'text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
 
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-          >
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            ) : (
-              <Sun className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          <div className="flex items-center space-x-4">
+            {user && (
+              <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                <User className="w-4 h-4" />
+                <span>{user.name}</span>
+              </div>
             )}
-          </button>
+            
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              ) : (
+                <Sun className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              )}
+            </button>
+
+            {user && (
+              <button
+                onClick={logout}
+                className="p-2 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>

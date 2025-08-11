@@ -5,6 +5,8 @@ import { open } from 'sqlite3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import authRoutes from './routes/auth.js';
+import { authenticateToken } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,12 +40,16 @@ const initDb = async () => {
 };
 
 // Initialize database on startup
-initDb();
+initDb().then(() => {
+  // Make db available to routes
+  app.locals.db = db;
+});
 
 // API Routes
+app.use('/api/auth', authRoutes);
 
-// Get all mindmaps
-app.get('/api/mindmaps', async (req, res) => {
+// Get all mindmaps for authenticated user
+app.get('/api/mindmaps', authenticateToken, async (req, res) => {
   try {
     const mindmaps = await db.all(`
       SELECT 
@@ -57,9 +63,10 @@ app.get('/api/mindmaps', async (req, res) => {
       FROM mindmaps m
       LEFT JOIN nodes n ON m.id = n.mindmap_id
       LEFT JOIN edges e ON m.id = e.mindmap_id
+      WHERE m.user_id = ?
       GROUP BY m.id
       ORDER BY m.updated_at DESC
-    `);
+    `, [req.user.userId]);
     res.json(mindmaps);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -67,12 +74,12 @@ app.get('/api/mindmaps', async (req, res) => {
 });
 
 // Get a single mindmap with all nodes and edges
-app.get('/api/mindmaps/:id', async (req, res) => {
+app.get('/api/mindmaps/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get mindmap
-    const mindmap = await db.get('SELECT * FROM mindmaps WHERE id = ?', [id]);
+    // Get mindmap (only if owned by user)
+    const mindmap = await db.get('SELECT * FROM mindmaps WHERE id = ? AND user_id = ?', [id, req.user.userId]);
     if (!mindmap) {
       return res.status(404).json({ error: 'Mindmap not found' });
     }
@@ -156,15 +163,15 @@ app.get('/api/mindmaps/:id', async (req, res) => {
 });
 
 // Create a new mindmap
-app.post('/api/mindmaps', async (req, res) => {
+app.post('/api/mindmaps', authenticateToken, async (req, res) => {
   try {
     const { title, description } = req.body;
     const id = uuidv4();
     
     await db.run(`
-      INSERT INTO mindmaps (id, title, description)
-      VALUES (?, ?, ?)
-    `, [id, title, description]);
+      INSERT INTO mindmaps (id, user_id, title, description)
+      VALUES (?, ?, ?, ?)
+    `, [id, req.user.userId, title, description]);
 
     const mindmap = await db.get('SELECT * FROM mindmaps WHERE id = ?', [id]);
     res.status(201).json({
@@ -182,10 +189,16 @@ app.post('/api/mindmaps', async (req, res) => {
 });
 
 // Update a mindmap
-app.put('/api/mindmaps/:id', async (req, res) => {
+app.put('/api/mindmaps/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, nodes, edges } = req.body;
+
+    // Verify mindmap ownership
+    const mindmap = await db.get('SELECT id FROM mindmaps WHERE id = ? AND user_id = ?', [id, req.user.userId]);
+    if (!mindmap) {
+      return res.status(404).json({ error: 'Mindmap not found' });
+    }
 
     // Update mindmap
     await db.run(`
@@ -231,9 +244,15 @@ app.put('/api/mindmaps/:id', async (req, res) => {
 });
 
 // Delete a mindmap
-app.delete('/api/mindmaps/:id', async (req, res) => {
+app.delete('/api/mindmaps/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Verify mindmap ownership
+    const mindmap = await db.get('SELECT id FROM mindmaps WHERE id = ? AND user_id = ?', [id, req.user.userId]);
+    if (!mindmap) {
+      return res.status(404).json({ error: 'Mindmap not found' });
+    }
     
     // Delete mindmap (cascade will handle nodes and edges)
     await db.run('DELETE FROM mindmaps WHERE id = ?', [id]);
